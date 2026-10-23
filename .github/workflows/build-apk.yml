@@ -13,7 +13,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -24,32 +24,467 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Self-Heal Project Structure & Configs
+      - name: Auto-Generate Complete MKR Crypto Pulse Codebase & Configs
         run: |
-          # 1. Ensure www directory exists and move web assets if they were uploaded to root
           mkdir -p www
-          for file in index.html style.css app.js sw.js manifest.json; do
-            if [ -f "$file" ] && [ ! -f "www/$file" ]; then
-              cp "$file" "www/$file"
-            fi
+
+          # Copy root files into www/ if user uploaded them to root
+          for f in index.html style.css app.js sw.js manifest.json; do
+            if [ -f "$f" ]; then cp "$f" "www/$f"; fi
           done
 
-          # 2. Ensure index.html exists inside www so Capacitor never crashes
+          # Auto-generate www/index.html if missing
           if [ ! -f "www/index.html" ]; then
-            echo "ERROR: index.html not found in root or www/ folder!"
-            exit 1
+          cat << 'EOF' > www/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+              <title>MKR Crypto Pulse</title>
+              <link rel="stylesheet" href="style.css" />
+          </head>
+          <body>
+              <header>
+                  <div class="header-content">
+                      <div class="search-container">
+                          <input autocomplete="off" id="search-input" placeholder="Search Market (e.g. BTC, SOL)..." type="text" />
+                      </div>
+                      <button id="refresh-btn" type="button">
+                          <span id="refresh-icon">🔄</span>
+                          <span>Refresh</span>
+                      </button>
+                  </div>
+              </header>
+              <div class="hero" id="home-hero">
+                  <h2 id="hero-title">MKR Crypto Pulse</h2>
+                  <p id="global-stats">Live Market Intelligence</p>
+              </div>
+              <main class="container" id="market-list-view">
+                  <div id="market-list"><div class="loading-state">Syncing Market...</div></div>
+              </main>
+              <section class="container view-hidden" id="news-view">
+                  <div class="filter-bar">
+                      <button class="filter-btn active" id="btn-latest" type="button">LATEST</button>
+                      <button class="filter-btn" id="btn-trending" type="button">🔥 TRENDING</button>
+                  </div>
+                  <div id="news-source-badge" class="source-badge">Source: Live Auto-Sync</div>
+                  <div id="news-content"></div>
+              </section>
+              <section class="container view-hidden" id="video-view"><div id="video-content"></div></section>
+              <section class="container view-hidden" id="fg-view">
+                  <div class="fg-wrapper">
+                      <div id="fg-container" class="fg-box">
+                          <img id="fg-image" src="https://alternative.me/crypto/fear-and-greed-index.png" alt="Fear and Greed Index" />
+                      </div>
+                      <p class="fg-caption">The Index measures live market sentiment (0-100).</p>
+                  </div>
+              </section>
+              <nav class="bottom-nav">
+                  <div class="nav-item active" data-tab="market" id="nav-market"><span class="nav-icon">📈</span><span>Market</span></div>
+                  <div class="nav-item" data-tab="news" id="nav-news"><span class="nav-icon">📰</span><span>News</span></div>
+                  <div class="nav-item" data-tab="video" id="nav-video"><span class="nav-icon">🎥</span><span>Videos</span></div>
+                  <div class="nav-item" data-tab="fg" id="nav-fg"><span class="nav-icon">🎯</span><span>Sentiment</span></div>
+              </nav>
+              <div id="chart-modal">
+                  <div id="modal-header">
+                      <h2 id="modal-title">Chart</h2>
+                      <button id="close-btn" type="button">BACK</button>
+                  </div>
+                  <div id="modal-body"></div>
+              </div>
+              <script src="app.js" defer></script>
+          </body>
+          </html>
+          EOF
           fi
 
-          # 3. Ensure package.json exists and has exact pinned Capacitor versions
+          # Auto-generate www/style.css if missing
+          if [ ! -f "www/style.css" ]; then
+          cat << 'EOF' > www/style.css
+          :root { --mkr-purple-deep: #4a148c; --mkr-purple-main: #7b1fa2; --mkr-gradient: linear-gradient(135deg, #6a1b9a 0%, #a29bfe 100%); --max-app-width: 1100px; }
+          * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+          body { font-family: 'Segoe UI', Roboto, sans-serif; background-color: #f8f7fa; margin: 0; padding-bottom: 80px; color: #202124; overflow-x: hidden; }
+          header { background: var(--mkr-purple-deep); color: white; padding: 12px 15px; display: flex; align-items: center; justify-content: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(74, 20, 140, 0.3); }
+          .header-content { width: 100%; max-width: 500px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+          .search-container { flex: 1; min-width: 0; }
+          #search-input { width: 100%; padding: 11px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); outline: none; font-size: 15px; background: rgba(255,255,255,0.15); color: white; }
+          #search-input::placeholder { color: rgba(255,255,255,0.75); }
+          #search-input:focus { background: white; color: #333; }
+          #refresh-btn { background: rgba(255,255,255,0.25); border: 1.5px solid rgba(255,255,255,0.3); color: white; padding: 0 14px; height: 40px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; gap: 6px; }
+          #refresh-icon { display: inline-block; }
+          .spinning #refresh-icon { animation: rotate 0.8s linear infinite; }
+          @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          .hero { background: var(--mkr-gradient); color: white; padding: 25px 15px; text-align: center; border-radius: 0 0 25px 25px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(106, 27, 154, 0.2); }
+          .hero h2 { margin: 0 0 6px 0; font-size: 1.4rem; font-weight: 800; }
+          .hero p { margin: 0; font-size: 0.95rem; }
+          .container { padding: 12px; max-width: 500px; margin: 0 auto; display: block; min-height: 50vh; }
+          .view-hidden { display: none !important; }
+          #market-list, #news-content, #video-content { display: grid; grid-template-columns: 1fr; gap: 12px; }
+          .filter-bar { display: flex; gap: 10px; margin-bottom: 10px; grid-column: 1 / -1; }
+          .filter-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: white; cursor: pointer; font-size: 0.8rem; font-weight: bold; color: #666; }
+          .filter-btn.active { background: var(--mkr-purple-main); color: white; border-color: var(--mkr-purple-main); }
+          .source-badge { font-size: 0.72rem; color: #666; margin-bottom: 12px; text-align: right; font-weight: 600; }
+          .video-label { grid-column: 1 / -1; font-size: 0.75rem; font-weight: 800; color: var(--mkr-purple-deep); margin: 15px 10px 4px; text-transform: uppercase; }
+          .video-card { background: white; border-radius: 15px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee; }
+          .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 10px; background: #000; }
+          .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+          .market-card { background: white; border-radius: 15px; padding: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eee; cursor: pointer; }
+          .news-card { background: white; border-radius: 15px; padding: 15px; border: 1px solid #eee; cursor: pointer; border-left: 4px solid var(--mkr-purple-main); display: flex; flex-direction: column; justify-content: space-between; }
+          .news-title { font-weight: 700; font-size: 0.98rem; color: #2d3436; line-height: 1.4; margin-bottom: 12px; }
+          .news-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #636e72; }
+          .price { font-weight: 800; font-size: 1.1rem; color: #2d3436; }
+          .change { font-size: 0.85rem; font-weight: 700; margin-top: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+          .up { color: #00b894; } .down { color: #d63031; }
+          .fg-wrapper { text-align: center; padding-top: 15px; }
+          .fg-box { max-width: 500px; margin: 0 auto; }
+          .fg-box img { width: 100%; border-radius: 15px; }
+          .fg-caption { margin-top: 18px; color: #5f6368; font-size: 0.9rem; }
+          #chart-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 3000; display: none; flex-direction: column; }
+          #modal-header { padding: 12px 15px; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+          #modal-title { margin: 0; font-size: 1rem; color: #4a148c; }
+          #close-btn { background: var(--mkr-purple-deep); color: white; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+          #modal-body { flex-grow: 1; }
+          .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 68px; background: white; display: flex; border-top: 1px solid #eee; z-index: 1000; }
+          .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: #b2bec3; cursor: pointer; }
+          .nav-item.active { color: var(--mkr-purple-main); }
+          .nav-icon { font-size: 1.3rem; margin-bottom: 2px; filter: grayscale(1); }
+          .nav-item.active .nav-icon { filter: grayscale(0); }
+          .loading-state { text-align: center; padding: 50px 20px; font-weight: bold; color: var(--mkr-purple-main); grid-column: 1 / -1; }
+          EOF
+          fi
+
+          # Auto-generate www/app.js if missing
+          if [ ! -f "www/app.js" ]; then
+          cat << 'EOF' > www/app.js
+          (function () {
+              'use strict';
+              const CONFIG = Object.freeze({
+                  APP_NAME: "MKR Crypto Pulse",
+                  CACHE_TTL: 300000,
+                  FETCH_TIMEOUT: 8000,
+                  NEWS_ENDPOINTS: [
+                      {
+                          name: "CryptoCompare Live",
+                          url: "https://min-api.cryptocompare.com/data/v2/news/?lang=EN",
+                          parser: (json) => {
+                              if (!json || !Array.isArray(json.Data)) throw new Error("Invalid format");
+                              return json.Data.map(item => ({
+                                  title: item.title,
+                                  url: item.url,
+                                  source: item.source_info ? item.source_info.name : (item.source || "CryptoCompare"),
+                                  score: (item.upvotes || 0) + (item.views || 0),
+                                  published: item.published_on * 1000
+                              }));
+                          }
+                      },
+                      {
+                          name: "CoinTelegraph Live",
+                          url: "https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fcointelegraph.com%2Frss",
+                          parser: (json) => {
+                              if (!json || json.status !== 'ok' || !Array.isArray(json.items)) throw new Error("Invalid RSS");
+                              return json.items.map((item, idx) => ({
+                                  title: item.title,
+                                  url: item.link,
+                                  source: "CoinTelegraph",
+                                  score: 100 - idx,
+                                  published: new Date(item.pubDate).getTime() || Date.now()
+                              }));
+                          }
+                      },
+                      {
+                          name: "CoinDesk Live",
+                          url: "https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.coindesk.com%2Farc%2Foutboundfeeds%2Frss%2F",
+                          parser: (json) => {
+                              if (!json || json.status !== 'ok' || !Array.isArray(json.items)) throw new Error("Invalid RSS");
+                              return json.items.map((item, idx) => ({
+                                  title: item.title,
+                                  url: item.link,
+                                  source: "CoinDesk",
+                                  score: 80 - idx,
+                                  published: new Date(item.pubDate).getTime() || Date.now()
+                              }));
+                          }
+                      }
+                  ]
+              });
+
+              let currentData = [];
+              let rawNews = [];
+              let newsFilter = 'latest';
+              let activeTab = 'market';
+
+              const dom = {
+                  modal: document.getElementById('chart-modal'),
+                  modalBody: document.getElementById('modal-body'),
+                  modalTitle: document.getElementById('modal-title'),
+                  closeBtn: document.getElementById('close-btn'),
+                  refreshBtn: document.getElementById('refresh-btn'),
+                  searchInput: document.getElementById('search-input'),
+                  hero: document.getElementById('home-hero'),
+                  heroTitle: document.getElementById('hero-title'),
+                  globalStats: document.getElementById('global-stats'),
+                  marketList: document.getElementById('market-list'),
+                  newsContent: document.getElementById('news-content'),
+                  newsBadge: document.getElementById('news-source-badge'),
+                  videoContent: document.getElementById('video-content'),
+                  fgImage: document.getElementById('fg-image'),
+                  btnLatest: document.getElementById('btn-latest'),
+                  btnTrending: document.getElementById('btn-trending'),
+                  views: {
+                      market: document.getElementById('market-list-view'),
+                      news: document.getElementById('news-view'),
+                      video: document.getElementById('video-view'),
+                      fg: document.getElementById('fg-view')
+                  }
+              };
+
+              function sanitizeHTML(str) {
+                  const temp = document.createElement('div');
+                  temp.textContent = String(str || '');
+                  return temp.innerHTML;
+              }
+
+              async function fetchWithTimeout(url, options = {}) {
+                  const controller = new AbortController();
+                  const timer = setTimeout(() => controller.abort(), CONFIG.FETCH_TIMEOUT);
+                  try {
+                      const response = await fetch(url, { ...options, signal: controller.signal });
+                      clearTimeout(timer);
+                      return response;
+                  } catch (err) {
+                      clearTimeout(timer);
+                      throw err;
+                  }
+              }
+
+              const Storage = {
+                  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+              };
+
+              function switchTab(tab, isBackAction = false) {
+                  if (!dom.views[tab] || tab === activeTab) return;
+                  activeTab = tab;
+                  if (!isBackAction) window.history.pushState({ tab }, "", "#" + tab);
+                  renderTab(tab);
+              }
+
+              function renderTab(tab) {
+                  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+                  Object.keys(dom.views).forEach(k => dom.views[k].classList.toggle('view-hidden', k !== tab));
+                  if (tab === 'market') {
+                      dom.hero.classList.remove('view-hidden');
+                      dom.heroTitle.textContent = CONFIG.APP_NAME;
+                      loadCrypto();
+                  } else if (tab === 'news') {
+                      dom.hero.classList.add('view-hidden');
+                      loadNews();
+                  } else if (tab === 'video') {
+                      dom.hero.classList.remove('view-hidden');
+                      dom.heroTitle.textContent = "Safe Market Videos";
+                      loadVideos();
+                  } else if (tab === 'fg') {
+                      dom.hero.classList.remove('view-hidden');
+                      dom.heroTitle.textContent = "Market Sentiment";
+                  }
+              }
+
+              async function loadCrypto(force = false) {
+                  const cached = Storage.get('mkr_crypto_data');
+                  const lastFetch = Storage.get('mkr_crypto_time');
+                  try {
+                      const globalRes = await fetchWithTimeout('https://api.coingecko.com/api/v3/global');
+                      if (globalRes.ok) {
+                          const globalData = await globalRes.json();
+                          const totalCap = globalData.data.total_market_cap.usd;
+                          const capChange = globalData.data.market_cap_change_percentage_24h_usd;
+                          const formattedCap = (totalCap / 1e12).toFixed(2) + 'T';
+                          const isUp = capChange >= 0;
+                          dom.globalStats.innerHTML = `Global Cap: <span style="font-weight:800">$${sanitizeHTML(formattedCap)}</span> <span class="${isUp ? 'up' : 'down'}" style="font-size:0.85rem; font-weight:700">(${isUp ? '▲' : '▼'}${Math.abs(capChange).toFixed(1)}%)</span>`;
+                      }
+                  } catch (e) {}
+
+                  if (!force && cached && lastFetch && (Date.now() - lastFetch < CONFIG.CACHE_TTL)) {
+                      currentData = cached;
+                      renderMarket(currentData);
+                      return;
+                  }
+
+                  try {
+                      const res = await fetchWithTimeout('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1');
+                      if (!res.ok) throw new Error("Rate Limit");
+                      const data = await res.json();
+                      currentData = data.map(c => ({
+                          n: String(c.name || ''),
+                          s: String(c.symbol || '').toUpperCase(),
+                          p: Number(c.current_price || 0),
+                          ch: Number(c.price_change_percentage_24h || 0)
+                      }));
+                      Storage.set('mkr_crypto_data', currentData);
+                      Storage.set('mkr_crypto_time', Date.now());
+                      renderMarket(currentData);
+                  } catch (e) {
+                      if (cached && cached.length) {
+                          currentData = cached;
+                          renderMarket(currentData);
+                      } else {
+                          dom.marketList.innerHTML = '<div class="loading-state">API Rate Limited. Tap Refresh in 60s.</div>';
+                      }
+                  }
+              }
+
+              function renderMarket(items) {
+                  dom.marketList.innerHTML = '';
+                  if (!items || !items.length) {
+                      dom.marketList.innerHTML = '<div class="loading-state">No matching coins found.</div>';
+                      return;
+                  }
+                  const fragment = document.createDocumentFragment();
+                  items.forEach(item => {
+                      const pos = item.ch >= 0;
+                      const div = document.createElement('div');
+                      div.className = 'market-card';
+                      div.addEventListener('click', () => openChart(item.s, item.n));
+                      div.innerHTML = `<div><div style="font-weight:700">${sanitizeHTML(item.n)}</div><div style="font-size:0.7rem;color:#777">${sanitizeHTML(item.s)}/USD</div></div><div style="text-align:right"><div class="price">$${item.p.toLocaleString(undefined, { maximumFractionDigits: 6 })}</div><div class="change ${pos ? 'up' : 'down'}">${pos ? '▲' : '▼'} ${Math.abs(item.ch).toFixed(2)}%</div></div>`;
+                      fragment.appendChild(div);
+                  });
+                  dom.marketList.appendChild(fragment);
+              }
+
+              async function loadNews(force = false) {
+                  const cachedNews = Storage.get('mkr_news_data');
+                  const cachedSource = Storage.get('mkr_news_source');
+                  const lastNewsFetch = Storage.get('mkr_news_time');
+
+                  if (!force && cachedNews && lastNewsFetch && (Date.now() - lastNewsFetch < CONFIG.CACHE_TTL)) {
+                      rawNews = cachedNews;
+                      dom.newsBadge.textContent = `Source: ${cachedSource || 'Live Cache'}`;
+                      displayNews();
+                      return;
+                  }
+
+                  dom.newsContent.innerHTML = '<div class="loading-state">Fetching Live Headlines...</div>';
+                  for (const ep of CONFIG.NEWS_ENDPOINTS) {
+                      try {
+                          const res = await fetchWithTimeout(ep.url);
+                          if (!res.ok) continue;
+                          const json = await res.json();
+                          const parsed = ep.parser(json);
+                          if (parsed && parsed.length > 0) {
+                              rawNews = parsed;
+                              Storage.set('mkr_news_data', rawNews);
+                              Storage.set('mkr_news_source', ep.name);
+                              Storage.set('mkr_news_time', Date.now());
+                              dom.newsBadge.textContent = `Source: ${ep.name}`;
+                              displayNews();
+                              return;
+                          }
+                      } catch (e) {}
+                  }
+
+                  if (cachedNews && cachedNews.length > 0) {
+                      rawNews = cachedNews;
+                      displayNews();
+                  } else {
+                      dom.newsContent.innerHTML = '<div class="loading-state">Unable to reach news feed. Tap Refresh.</div>';
+                  }
+              }
+
+              function displayNews() {
+                  dom.newsContent.innerHTML = '';
+                  let items = [...rawNews];
+                  if (newsFilter === 'trending') items.sort((a, b) => (b.score || 0) - (a.score || 0));
+                  else items.sort((a, b) => (b.published || 0) - (a.published || 0));
+
+                  const fragment = document.createDocumentFragment();
+                  items.slice(0, 26).forEach(item => {
+                      const card = document.createElement('div');
+                      card.className = 'news-card';
+                      card.addEventListener('click', () => {
+                          if (item.url && /^https?:\/\//i.test(item.url)) window.open(item.url, '_blank', 'noopener');
+                      });
+                      card.innerHTML = `<span class="news-title">${sanitizeHTML(item.title)}</span><div class="news-meta"><span>${sanitizeHTML(item.source)}</span><span style="color:var(--mkr-purple-main);font-weight:bold;">Read More →</span></div>`;
+                      fragment.appendChild(card);
+                  });
+                  dom.newsContent.appendChild(fragment);
+              }
+
+              function loadVideos() {
+                  if (dom.videoContent.children.length > 0) return;
+                  const channels = [
+                      { name: "Coin Bureau", pId: "UUqK_GSMbzhxjiFeIWUz9A8Q" },
+                      { name: "Altcoin Daily", pId: "UUbLhGKVY-bJPcawebgtNfbw" },
+                      { name: "CryptosRUs", pId: "UU_I9_7W3YkS1p27OqW2_Npg" }
+                  ];
+                  dom.videoContent.innerHTML = '';
+                  channels.forEach(ch => {
+                      const label = document.createElement('span');
+                      label.className = 'video-label';
+                      label.textContent = ch.name + " Feed";
+                      dom.videoContent.appendChild(label);
+                      const card = document.createElement('div');
+                      card.className = 'video-card';
+                      card.innerHTML = `<div class="video-container"><iframe src="https://www.youtube-nocookie.com/embed?listType=playlist&list=${ch.pId}" loading="lazy" allowfullscreen="true"></iframe></div>`;
+                      dom.videoContent.appendChild(card);
+                  });
+              }
+
+              function openChart(symbol, name) {
+                  dom.modalTitle.textContent = name + " Live Chart";
+                  dom.modal.style.display = 'flex';
+                  document.body.style.overflow = 'hidden';
+                  const clean = symbol.replace(/[^A-Z0-9]/g, '');
+                  const pair = ['USDT', 'USDC', 'DAI'].includes(clean) ? 'BTCUSDT' : clean + 'USDT';
+                  dom.modalBody.innerHTML = `<iframe src="https://s.tradingview.com/widgetembed/?symbol=BINANCE:${pair}&theme=light" width="100%" height="100%" frameborder="0"></iframe>`;
+                  window.history.pushState({ modal: true }, "");
+              }
+
+              function closeModal() {
+                  dom.modal.style.display = 'none';
+                  document.body.style.overflow = '';
+                  dom.modalBody.innerHTML = '';
+              }
+
+              dom.refreshBtn.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  dom.refreshBtn.classList.add('spinning');
+                  setTimeout(() => dom.refreshBtn.classList.remove('spinning'), 800);
+                  if (activeTab === 'market') loadCrypto(true);
+                  else if (activeTab === 'news') loadNews(true);
+                  else if (activeTab === 'fg') dom.fgImage.src = "https://alternative.me/crypto/fear-and-greed-index.png?t=" + Date.now();
+              });
+
+              dom.searchInput.addEventListener('keyup', () => {
+                  if (activeTab !== 'market') switchTab('market');
+                  const q = dom.searchInput.value.trim().toLowerCase();
+                  renderMarket(currentData.filter(i => i.n.toLowerCase().includes(q) || i.s.toLowerCase().includes(q)));
+              });
+
+              dom.closeBtn.addEventListener('click', closeModal);
+              dom.btnLatest.addEventListener('click', () => { newsFilter = 'latest'; dom.btnLatest.classList.add('active'); dom.btnTrending.classList.remove('active'); displayNews(); });
+              dom.btnTrending.addEventListener('click', () => { newsFilter = 'trending'; dom.btnTrending.classList.add('active'); dom.btnLatest.classList.remove('active'); displayNews(); });
+
+              document.querySelectorAll('.nav-item').forEach(nav => nav.addEventListener('click', () => switchTab(nav.dataset.tab)));
+              window.addEventListener('popstate', (e) => {
+                  if (dom.modal.style.display === 'flex') { closeModal(); return; }
+                  switchTab((e.state && e.state.tab) ? e.state.tab : 'market', true);
+              });
+
+              renderTab('market');
+          })();
+          EOF
+          fi
+
+          # Create package.json and capacitor.config.json
           cat << 'EOF' > package.json
           {
             "name": "mkr-crypto-pulse",
             "version": "1.0.0",
-            "description": "MKR Crypto Pulse - Live Crypto Market Intelligence & News APK",
+            "description": "MKR Crypto Pulse APK",
             "main": "www/index.html",
             "dependencies": {
               "@capacitor/android": "6.2.0",
-              "@capacitor/app": "6.0.2",
               "@capacitor/core": "6.2.0"
             },
             "devDependencies": {
@@ -58,7 +493,6 @@ jobs:
           }
           EOF
 
-          # 4. Ensure capacitor.config.json exists
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.mkrweb.mkrcryptopulse",
@@ -75,19 +509,18 @@ jobs:
           }
           EOF
 
-      - name: Install Capacitor Dependencies & Generate Android Project
+      - name: Install Capacitor & Generate Android Project
         run: |
           npm install --no-audit --no-fund
           rm -rf android
           npx cap add android
           npx cap sync android
 
-      - name: Configure Android Cleartext & Permissions
+      - name: Enable Android Cleartext Traffic
         run: |
-          # Ensure AndroidManifest allows live HTTP/HTTPS API & chart streams
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/g' android/app/src/main/AndroidManifest.xml
 
-      - name: Compile Debug APK with Gradle
+      - name: Compile Debug APK
         run: |
           cd android
           chmod +x gradlew
