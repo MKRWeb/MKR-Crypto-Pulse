@@ -1,0 +1,13 @@
+{
+  "appId": "com.mkrweb.mkrcryptopulse",
+  "appName": "MKR Crypto Pulse",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
