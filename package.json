@@ -1,11 +1,10 @@
 {
   "name": "mkr-crypto-pulse",
   "version": "1.0.0",
-  "description": "MKR Crypto Pulse - Live Crypto Market Intelligence & News APK",
+  "description": "MKR Crypto Pulse Android APK",
   "main": "www/index.html",
   "dependencies": {
     "@capacitor/android": "6.2.0",
-    "@capacitor/app": "6.0.2",
     "@capacitor/core": "6.2.0"
   },
   "devDependencies": {
