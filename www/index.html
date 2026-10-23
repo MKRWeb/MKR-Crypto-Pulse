@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob: 'unsafe-inline'; frame-src https://www.youtube-nocookie.com https://s.tradingview.com;" />
+    <title>MKR Crypto Pulse</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="search-container">
+                <input autocomplete="off" id="search-input" placeholder="Search Market (e.g. BTC, SOL)..." type="text" />
+            </div>
+            <button id="refresh-btn" type="button" aria-label="Refresh Data">
+                <span id="refresh-icon">🔄</span>
+                <span>Refresh</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="hero" id="home-hero">
+        <h2 id="hero-title">MKR Crypto Pulse</h2>
+        <p id="global-stats">Syncing Live Market Intelligence...</p>
+    </div>
+
+    <!-- MARKET VIEW -->
+    <main class="container" id="market-list-view">
+        <div id="market-list">
+            <div class="loading-state">Syncing Market...</div>
+        </div>
+    </main>
+
+    <!-- NEWS VIEW -->
+    <section class="container view-hidden" id="news-view">
+        <div class="filter-bar">
+            <button class="filter-btn active" id="btn-latest" type="button">LATEST</button>
+            <button class="filter-btn" id="btn-trending" type="button">🔥 TRENDING</button>
+        </div>
+        <div id="news-source-badge" class="source-badge">Source: Auto-Sync</div>
+        <div id="news-content"></div>
+    </section>
+
+    <!-- VIDEO VIEW -->
+    <section class="container view-hidden" id="video-view">
+        <div id="video-content"></div>
+    </section>
+
+    <!-- SENTIMENT VIEW -->
+    <section class="container view-hidden" id="fg-view">
+        <div class="fg-wrapper">
+            <div id="fg-container" class="fg-box">
+                <img id="fg-image" src="https://alternative.me/crypto/fear-and-greed-index.png" alt="Fear and Greed Index" />
+            </div>
+            <p class="fg-caption">The Index measures live market sentiment (0 = Extreme Fear, 100 = Extreme Greed).</p>
+        </div>
+    </section>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" data-tab="market" id="nav-market">
+            <span class="nav-icon">📈</span><span>Market</span>
+        </div>
+        <div class="nav-item" data-tab="news" id="nav-news">
+            <span class="nav-icon">📰</span><span>News</span>
+        </div>
+        <div class="nav-item" data-tab="video" id="nav-video">
+            <span class="nav-icon">🎥</span><span>Videos</span>
+        </div>
+        <div class="nav-item" data-tab="fg" id="nav-fg">
+            <span class="nav-icon">🎯</span><span>Sentiment</span>
+        </div>
+    </nav>
+
+    <!-- CHART MODAL -->
+    <div id="chart-modal">
+        <div id="modal-header">
+            <h2 id="modal-title">Chart</h2>
+            <button id="close-btn" type="button">BACK</button>
+        </div>
+        <div id="modal-body"></div>
+    </div>
+
+    <script src="app.js" defer></script>
+</body>
+</html>
