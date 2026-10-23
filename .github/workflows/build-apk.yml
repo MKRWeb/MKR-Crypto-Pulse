@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout Repository
@@ -16,30 +16,82 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup Java JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Dependencies & Generate Android Platform
+      - name: Self-Heal Project Structure & Configs
         run: |
-          npm install
-          if [ ! -d "android" ]; then
-            npx cap add android
+          # 1. Ensure www directory exists and move web assets if they were uploaded to root
+          mkdir -p www
+          for file in index.html style.css app.js sw.js manifest.json; do
+            if [ -f "$file" ] && [ ! -f "www/$file" ]; then
+              cp "$file" "www/$file"
+            fi
+          done
+
+          # 2. Ensure index.html exists inside www so Capacitor never crashes
+          if [ ! -f "www/index.html" ]; then
+            echo "ERROR: index.html not found in root or www/ folder!"
+            exit 1
           fi
+
+          # 3. Ensure package.json exists and has exact pinned Capacitor versions
+          cat << 'EOF' > package.json
+          {
+            "name": "mkr-crypto-pulse",
+            "version": "1.0.0",
+            "description": "MKR Crypto Pulse - Live Crypto Market Intelligence & News APK",
+            "main": "www/index.html",
+            "dependencies": {
+              "@capacitor/android": "6.2.0",
+              "@capacitor/app": "6.0.2",
+              "@capacitor/core": "6.2.0"
+            },
+            "devDependencies": {
+              "@capacitor/cli": "6.2.0"
+            }
+          }
+          EOF
+
+          # 4. Ensure capacitor.config.json exists
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "com.mkrweb.mkrcryptopulse",
+            "appName": "MKR Crypto Pulse",
+            "webDir": "www",
+            "bundledWebRuntime": false,
+            "server": {
+              "androidScheme": "https",
+              "cleartext": true
+            },
+            "android": {
+              "allowMixedContent": true
+            }
+          }
+          EOF
+
+      - name: Install Capacitor Dependencies & Generate Android Project
+        run: |
+          npm install --no-audit --no-fund
+          rm -rf android
+          npx cap add android
           npx cap sync android
 
-      - name: Build Debug APK
+      - name: Configure Android Cleartext & Permissions
+        run: |
+          # Ensure AndroidManifest allows live HTTP/HTTPS API & chart streams
+          sed -i 's/<application/<application android:usesCleartextTraffic="true"/g' android/app/src/main/AndroidManifest.xml
+
+      - name: Compile Debug APK with Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload Compiled APK Artifact
         uses: actions/upload-artifact@v4
