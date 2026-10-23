@@ -1,9 +1,12 @@
-name: Build MKR Crypto Pulse APK
+name: Build & Release MKR Crypto Pulse APK
 
 on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -24,18 +27,18 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Auto-Generate Complete MKR Crypto Pulse Codebase & Configs
+      - name: Prepare Web Assets & Capacitor Config
         run: |
           mkdir -p www
 
-          # Copy root files into www/ if user uploaded them to root
           for f in index.html style.css app.js sw.js manifest.json; do
-            if [ -f "$f" ]; then cp "$f" "www/$f"; fi
+            if [ -f "$f" ]; then
+              cp "$f" "www/$f"
+            fi
           done
 
-          # Auto-generate www/index.html if missing
           if [ ! -f "www/index.html" ]; then
-          cat << 'EOF' > www/index.html
+          cat <<'EOF' > www/index.html
           <!DOCTYPE html>
           <html lang="en">
           <head>
@@ -99,9 +102,8 @@ jobs:
           EOF
           fi
 
-          # Auto-generate www/style.css if missing
           if [ ! -f "www/style.css" ]; then
-          cat << 'EOF' > www/style.css
+          cat <<'EOF' > www/style.css
           :root { --mkr-purple-deep: #4a148c; --mkr-purple-main: #7b1fa2; --mkr-gradient: linear-gradient(135deg, #6a1b9a 0%, #a29bfe 100%); --max-app-width: 1100px; }
           * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
           body { font-family: 'Segoe UI', Roboto, sans-serif; background-color: #f8f7fa; margin: 0; padding-bottom: 80px; color: #202124; overflow-x: hidden; }
@@ -154,9 +156,8 @@ jobs:
           EOF
           fi
 
-          # Auto-generate www/app.js if missing
           if [ ! -f "www/app.js" ]; then
-          cat << 'EOF' > www/app.js
+          cat <<'EOF' > www/app.js
           (function () {
               'use strict';
               const CONFIG = Object.freeze({
@@ -476,38 +477,36 @@ jobs:
           EOF
           fi
 
-          # Create package.json and capacitor.config.json
-          cat << 'EOF' > package.json
-          {
-            "name": "mkr-crypto-pulse",
-            "version": "1.0.0",
-            "description": "MKR Crypto Pulse APK",
-            "main": "www/index.html",
-            "dependencies": {
-              "@capacitor/android": "6.2.0",
-              "@capacitor/core": "6.2.0"
-            },
-            "devDependencies": {
-              "@capacitor/cli": "6.2.0"
-            }
-          }
-          EOF
+          node -e '
+            const fs = require("fs");
+            fs.writeFileSync("package.json", JSON.stringify({
+              name: "mkr-crypto-pulse",
+              version: "1.0.0",
+              description: "MKR Crypto Pulse APK",
+              main: "www/index.html",
+              dependencies: {
+                "@capacitor/android": "6.2.0",
+                "@capacitor/core": "6.2.0"
+              },
+              devDependencies: {
+                "@capacitor/cli": "6.2.0"
+              }
+            }, null, 2));
 
-          cat << 'EOF' > capacitor.config.json
-          {
-            "appId": "com.mkrweb.mkrcryptopulse",
-            "appName": "MKR Crypto Pulse",
-            "webDir": "www",
-            "bundledWebRuntime": false,
-            "server": {
-              "androidScheme": "https",
-              "cleartext": true
-            },
-            "android": {
-              "allowMixedContent": true
-            }
-          }
-          EOF
+            fs.writeFileSync("capacitor.config.json", JSON.stringify({
+              appId: "com.mkrweb.mkrcryptopulse",
+              appName: "MKR Crypto Pulse",
+              webDir: "www",
+              bundledWebRuntime: false,
+              server: {
+                androidScheme: "https",
+                cleartext: true
+              },
+              android: {
+                allowMixedContent: true
+              }
+            }, null, 2));
+          '
 
       - name: Install Capacitor & Generate Android Project
         run: |
@@ -520,14 +519,27 @@ jobs:
         run: |
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/g' android/app/src/main/AndroidManifest.xml
 
-      - name: Compile Debug APK
+      - name: Compile APK with Gradle
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../MKR-Crypto-Pulse.apk
 
-      - name: Upload Compiled APK Artifact
+      - name: Upload APK to Workflow Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: MKR-Crypto-Pulse-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: MKR-Crypto-Pulse.apk
+
+      - name: Publish APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "MKR Crypto Pulse v1.0.${{ github.run_number }}"
+          body: "Automated build of **MKR Crypto Pulse** Android APK with Multi-Fallback Live News Engine & Live Market Intelligence."
+          files: MKR-Crypto-Pulse.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
