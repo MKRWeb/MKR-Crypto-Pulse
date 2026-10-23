@@ -1,0 +1,9 @@
+{
+  "short_name": "MKR Pulse",
+  "name": "MKR Crypto Pulse",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8f7fa",
+  "theme_color": "#4a148c",
+  "orientation": "portrait"
+}
